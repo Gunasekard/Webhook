@@ -1,28 +1,15 @@
-- id: webhook
-  execute-command: /home/adnan/redeploy-go-webhook.sh
-  command-working-directory: /home/adnan/go
-  response-message: I got the payload!
-  response-headers:
-  - name: Access-Control-Allow-Origin
-    value: '*'
-  pass-arguments-to-command:
-  - source: payload
-    name: head_commit.id
-  - source: payload
-    name: pusher.name
-  - source: payload
-    name: pusher.email
-  trigger-rule:
-    and:
-    - match:
-        type: payload-hmac-sha1
-        secret: mysecret
-        parameter:
-          source: header
-          name: X-Hub-Signature
-    - match:
-        type: value
-        value: refs/heads/master
-        parameter:
-          source: payload
-          name: ref
+@app.route('/webhook', methods=['GET', 'POST'])
+def tracking():
+   if request.method == 'POST':
+      data = request.get_json()
+      commit_author = data['actor']['username']
+      commit_hash = data['push']['changes'][0]['new']['target']['hash'][:7]
+      commit_url = data['push']['changes'][0]['new']['target']['links']['html']['href']
+      if _platform == "darwin":
+         from pync import Notifier
+         Notifier.notify('%s committed %s\nClick to view in Bitbucket' % (commit_author, commit_hash), title='Webhook received!', open=commit_url)
+      else:
+         print 'Webhook received! %s committed %s' % (commit_author, commit_hash)
+      return 'OK'
+   else:
+      return displayHTML(request)
